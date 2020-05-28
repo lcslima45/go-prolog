@@ -15,17 +15,17 @@ func NewHTTPServer(addr string) *http.Server{
 	//marca o manipulador de produção com método POST que adiciona as gravações ao log
 	r.HandleFunc("/", httprsv.handleProduce).Methods("POST")
 	//marca o manipulador de consumo com método GET QUE retira as gravações do log
-	r.HandleFunc("/", httprsv.handleProduce).Methods("GET"))
+	r.HandleFunc("/", httprsv.handleConsume).Methods("GET")
 	return &http.Server{
 		Addr: addr,
 		Handler: r, 
 	}
 }
-
+//é um ponteiro para o Log produzido no log.go
 type httpServer struct {
 	Log *Log 
 }
-
+//instancia o valor dO httpServer Log ao chamar a função NewLog do log.go
 func newHTTPServer() *httpServer{
 	return &httpServer{
 		Log: NewLog(),
@@ -51,11 +51,11 @@ type ConsumeResponse struct {
 func (s *httpServer) handleProduce (w http.ResponseWriter, r *http.Request) {
 	var req ProduceRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
-	err != nil {
+	if	err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	off, error := s.Log.Append(req.Record)
+	off, err := s.Log.Append(req.Record)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -74,7 +74,7 @@ func (s *httpServer) handleConsume(w http.ResponseWriter, r *http.Request){
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	record, err := Log.Read(req.Offset)
+	record, err := s.Log.Read(req.Offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
@@ -82,7 +82,7 @@ func (s *httpServer) handleConsume(w http.ResponseWriter, r *http.Request){
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	res := ConsumeResponse{Record: record}
-	err := json.NewEncoder(w).Encode(res)
+	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
